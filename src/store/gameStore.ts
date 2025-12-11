@@ -197,6 +197,24 @@ export const useGameStore = create<GameState>((set, get) => ({
         set({ missions: missions as unknown as Mission[] });
       }
 
+      // Fetch current week's challenges
+      const todayDate = new Date();
+      const dayOfWeek = todayDate.getDay();
+      const diff = todayDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+      const monday = new Date(todayDate.setDate(diff));
+      monday.setHours(0, 0, 0, 0);
+      const weekStart = monday.toISOString().split('T')[0];
+
+      const { data: weeklyChallenges } = await supabase
+        .from('weekly_challenges')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('week_start', weekStart);
+      
+      if (weeklyChallenges) {
+        set({ weeklyChallenges: weeklyChallenges as unknown as WeeklyChallenge[] });
+      }
+
       // Fetch all badges
       const { data: badges } = await supabase
         .from('badges')
@@ -316,6 +334,37 @@ export const useGameStore = create<GameState>((set, get) => ({
             completed: isCompleted
           })
           .eq('id', relevantMission.id);
+      }
+
+      // Update weekly challenge progress
+      const weeklyChallenges = get().weeklyChallenges;
+      const relevantChallenge = weeklyChallenges.find(c => c.type === type && !c.completed);
+      if (relevantChallenge) {
+        const newProgress = relevantChallenge.progress_minutes + minutes;
+        const isCompleted = newProgress >= relevantChallenge.target_minutes;
+        
+        await supabase
+          .from('weekly_challenges')
+          .update({ 
+            progress_minutes: newProgress,
+            completed: isCompleted
+          })
+          .eq('id', relevantChallenge.id);
+
+        // If challenge just completed, award bonus XP
+        if (isCompleted && !relevantChallenge.completed) {
+          const finalTotalXp = newTotalXp + relevantChallenge.bonus_xp;
+          let finalLevel = newLevel;
+          
+          while (finalTotalXp >= getXpRequiredForLevel(finalLevel + 1)) {
+            finalLevel++;
+          }
+
+          await supabase
+            .from('profiles')
+            .update({ total_xp: finalTotalXp, level: finalLevel })
+            .eq('id', profile.id);
+        }
       }
 
       // Refresh data
