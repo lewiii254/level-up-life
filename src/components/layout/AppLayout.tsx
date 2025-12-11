@@ -8,6 +8,7 @@ import {
   Brain, 
   BarChart3, 
   Trophy,
+  Sparkles,
   LogOut,
   Menu,
   X
@@ -24,6 +25,7 @@ interface AppLayoutProps {
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/missions', label: 'Missions', icon: Target },
+  { path: '/challenges', label: 'Weekly Challenges', icon: Sparkles },
   { path: '/timer', label: 'Focus Timer', icon: Timer },
   { path: '/mentor', label: 'AI Mentor', icon: Brain },
   { path: '/stats', label: 'Statistics', icon: BarChart3 },
