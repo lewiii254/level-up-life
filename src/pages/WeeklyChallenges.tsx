@@ -33,13 +33,18 @@ export default function WeeklyChallenges() {
   const potentialBonusXp = weeklyChallenges.reduce((sum, c) => sum + c.bonus_xp, 0);
 
   // Calculate week dates
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-  const monday = new Date(today.setDate(diff));
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
+  const getWeekDates = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    const monday = new Date(today);
+    monday.setDate(diff);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    return { monday, sunday };
+  };
 
+  const { monday, sunday } = getWeekDates();
   const weekDisplay = `${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${sunday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
 
   if (isLoading) {

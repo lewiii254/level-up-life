@@ -272,8 +272,31 @@ export const useGameStore = create<GameState>((set, get) => ({
           xp,
         });
 
-      // Update profile XP and check for level up
-      const newTotalXp = profile.total_xp + xp;
+      // Check for weekly challenge completion and bonus XP
+      const weeklyChallenges = get().weeklyChallenges;
+      const relevantChallenge = weeklyChallenges.find(c => c.type === type && !c.completed);
+      let bonusXp = 0;
+      
+      if (relevantChallenge) {
+        const newProgress = relevantChallenge.progress_minutes + minutes;
+        const isCompleted = newProgress >= relevantChallenge.target_minutes;
+        
+        await supabase
+          .from('weekly_challenges')
+          .update({ 
+            progress_minutes: newProgress,
+            completed: isCompleted
+          })
+          .eq('id', relevantChallenge.id);
+
+        // Add bonus XP if challenge just completed
+        if (isCompleted && !relevantChallenge.completed) {
+          bonusXp = relevantChallenge.bonus_xp;
+        }
+      }
+
+      // Update profile XP and check for level up (including bonus XP)
+      const newTotalXp = profile.total_xp + xp + bonusXp;
       let newLevel = profile.level;
       
       while (newTotalXp >= getXpRequiredForLevel(newLevel + 1)) {
@@ -334,37 +357,6 @@ export const useGameStore = create<GameState>((set, get) => ({
             completed: isCompleted
           })
           .eq('id', relevantMission.id);
-      }
-
-      // Update weekly challenge progress
-      const weeklyChallenges = get().weeklyChallenges;
-      const relevantChallenge = weeklyChallenges.find(c => c.type === type && !c.completed);
-      if (relevantChallenge) {
-        const newProgress = relevantChallenge.progress_minutes + minutes;
-        const isCompleted = newProgress >= relevantChallenge.target_minutes;
-        
-        await supabase
-          .from('weekly_challenges')
-          .update({ 
-            progress_minutes: newProgress,
-            completed: isCompleted
-          })
-          .eq('id', relevantChallenge.id);
-
-        // If challenge just completed, award bonus XP
-        if (isCompleted && !relevantChallenge.completed) {
-          const finalTotalXp = newTotalXp + relevantChallenge.bonus_xp;
-          let finalLevel = newLevel;
-          
-          while (finalTotalXp >= getXpRequiredForLevel(finalLevel + 1)) {
-            finalLevel++;
-          }
-
-          await supabase
-            .from('profiles')
-            .update({ total_xp: finalTotalXp, level: finalLevel })
-            .eq('id', profile.id);
-        }
       }
 
       // Refresh data
@@ -447,7 +439,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     const today = new Date();
     const dayOfWeek = today.getDay();
     const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-    const monday = new Date(today.setDate(diff));
+    const monday = new Date(today);
+    monday.setDate(diff);
     monday.setHours(0, 0, 0, 0);
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 
 type SoundType = 'xp' | 'levelUp' | 'missionComplete' | 'achievement';
 
@@ -33,12 +33,20 @@ const soundFrequencies: Record<SoundType, { frequency: number; duration: number;
 
 export function useSound(options: UseSoundOptions = {}) {
   const { enabled = true, volume = 0.3 } = options;
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  const getAudioContext = () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    return audioContextRef.current;
+  };
 
   const playSound = useCallback(
     (type: SoundType) => {
       if (!enabled) return;
 
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContext = getAudioContext();
       const gainNode = audioContext.createGain();
       gainNode.connect(audioContext.destination);
       gainNode.gain.value = volume;
@@ -57,11 +65,6 @@ export function useSound(options: UseSoundOptions = {}) {
         
         currentTime += note.duration + 0.05; // Small gap between notes
       });
-
-      // Cleanup
-      setTimeout(() => {
-        audioContext.close();
-      }, (currentTime - audioContext.currentTime + 0.5) * 1000);
     },
     [enabled, volume]
   );
