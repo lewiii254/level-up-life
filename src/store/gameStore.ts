@@ -3,6 +3,19 @@ import { supabase } from '@/integrations/supabase/client';
 
 export type ActivityType = 'coding' | 'study' | 'self_improvement';
 
+export interface WeeklyChallenge {
+  id: string;
+  title: string;
+  description: string;
+  type: ActivityType;
+  target_minutes: number;
+  progress_minutes: number;
+  bonus_xp: number;
+  completed: boolean;
+  week_start: string;
+  week_end: string;
+}
+
 interface Profile {
   id: string;
   name: string | null;
@@ -57,19 +70,25 @@ interface GameState {
   profile: Profile | null;
   streaks: Streak | null;
   missions: Mission[];
+  weeklyChallenges: WeeklyChallenge[];
   badges: Badge[];
   userBadges: UserBadge[];
   activities: Activity[];
   isLoading: boolean;
+  soundEnabled: boolean;
+  hapticEnabled: boolean;
   
   // Actions
   setProfile: (profile: Profile | null) => void;
   setStreaks: (streaks: Streak | null) => void;
   setMissions: (missions: Mission[]) => void;
+  setWeeklyChallenges: (challenges: WeeklyChallenge[]) => void;
   setBadges: (badges: Badge[]) => void;
   setUserBadges: (userBadges: UserBadge[]) => void;
   setActivities: (activities: Activity[]) => void;
   setLoading: (loading: boolean) => void;
+  setSoundEnabled: (enabled: boolean) => void;
+  setHapticEnabled: (enabled: boolean) => void;
   
   // Computed
   getXpForNextLevel: () => number;
@@ -80,6 +99,8 @@ interface GameState {
   logActivity: (type: ActivityType, minutes: number) => Promise<void>;
   updateMissionProgress: (missionId: string, minutes: number) => Promise<void>;
   generateDailyMissions: () => Promise<void>;
+  generateWeeklyChallenges: () => Promise<void>;
+  updateWeeklyChallengeProgress: (challengeId: string, minutes: number) => Promise<void>;
 }
 
 // XP required for each level (exponential growth)
@@ -104,18 +125,24 @@ export const useGameStore = create<GameState>((set, get) => ({
   profile: null,
   streaks: null,
   missions: [],
+  weeklyChallenges: [],
   badges: [],
   userBadges: [],
   activities: [],
   isLoading: false,
+  soundEnabled: true,
+  hapticEnabled: true,
 
   setProfile: (profile) => set({ profile }),
   setStreaks: (streaks) => set({ streaks }),
   setMissions: (missions) => set({ missions }),
+  setWeeklyChallenges: (weeklyChallenges) => set({ weeklyChallenges }),
   setBadges: (badges) => set({ badges }),
   setUserBadges: (userBadges) => set({ userBadges }),
   setActivities: (activities) => set({ activities }),
   setLoading: (isLoading) => set({ isLoading }),
+  setSoundEnabled: (soundEnabled) => set({ soundEnabled }),
+  setHapticEnabled: (hapticEnabled) => set({ hapticEnabled }),
 
   getXpForNextLevel: () => {
     const profile = get().profile;
@@ -168,6 +195,24 @@ export const useGameStore = create<GameState>((set, get) => ({
       
       if (missions) {
         set({ missions: missions as unknown as Mission[] });
+      }
+
+      // Fetch current week's challenges
+      const todayDate = new Date();
+      const dayOfWeek = todayDate.getDay();
+      const diff = todayDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+      const monday = new Date(todayDate.setDate(diff));
+      monday.setHours(0, 0, 0, 0);
+      const weekStart = monday.toISOString().split('T')[0];
+
+      const { data: weeklyChallenges } = await supabase
+        .from('weekly_challenges')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('week_start', weekStart);
+      
+      if (weeklyChallenges) {
+        set({ weeklyChallenges: weeklyChallenges as unknown as WeeklyChallenge[] });
       }
 
       // Fetch all badges
@@ -227,8 +272,31 @@ export const useGameStore = create<GameState>((set, get) => ({
           xp,
         });
 
-      // Update profile XP and check for level up
-      const newTotalXp = profile.total_xp + xp;
+      // Check for weekly challenge completion and bonus XP
+      const weeklyChallenges = get().weeklyChallenges;
+      const relevantChallenge = weeklyChallenges.find(c => c.type === type && !c.completed);
+      let bonusXp = 0;
+      
+      if (relevantChallenge) {
+        const newProgress = relevantChallenge.progress_minutes + minutes;
+        const isCompleted = newProgress >= relevantChallenge.target_minutes;
+        
+        await supabase
+          .from('weekly_challenges')
+          .update({ 
+            progress_minutes: newProgress,
+            completed: isCompleted
+          })
+          .eq('id', relevantChallenge.id);
+
+        // Add bonus XP if challenge just completed
+        if (isCompleted && !relevantChallenge.completed) {
+          bonusXp = relevantChallenge.bonus_xp;
+        }
+      }
+
+      // Update profile XP and check for level up (including bonus XP)
+      const newTotalXp = profile.total_xp + xp + bonusXp;
       let newLevel = profile.level;
       
       while (newTotalXp >= getXpRequiredForLevel(newLevel + 1)) {
@@ -360,6 +428,142 @@ export const useGameStore = create<GameState>((set, get) => ({
       await get().fetchUserData(profile.id);
     } catch (error) {
       console.error('Error generating missions:', error);
+    }
+  },
+
+  generateWeeklyChallenges: async () => {
+    const profile = get().profile;
+    if (!profile) return;
+
+    // Get current week start (Monday) and end (Sunday)
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    const monday = new Date(today);
+    monday.setDate(diff);
+    monday.setHours(0, 0, 0, 0);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    const weekStart = monday.toISOString().split('T')[0];
+    const weekEnd = sunday.toISOString().split('T')[0];
+
+    // Check if challenges already exist for this week
+    const { data: existingChallenges } = await supabase
+      .from('weekly_challenges')
+      .select('id')
+      .eq('user_id', profile.id)
+      .eq('week_start', weekStart);
+
+    if (existingChallenges && existingChallenges.length > 0) {
+      // Fetch existing challenges
+      const { data: challenges } = await supabase
+        .from('weekly_challenges')
+        .select('*')
+        .eq('user_id', profile.id)
+        .eq('week_start', weekStart);
+      
+      if (challenges) {
+        set({ weeklyChallenges: challenges as unknown as WeeklyChallenge[] });
+      }
+      return;
+    }
+
+    // Generate new weekly challenges
+    const challenges = [
+      {
+        title: '🎯 Code Master',
+        description: 'Complete 180 minutes of coding this week',
+        type: 'coding' as ActivityType,
+        target_minutes: 180,
+        bonus_xp: 200,
+      },
+      {
+        title: '📚 Knowledge Seeker',
+        description: 'Study for 120 minutes this week',
+        type: 'study' as ActivityType,
+        target_minutes: 120,
+        bonus_xp: 150,
+      },
+      {
+        title: '💪 Self Improvement Champion',
+        description: 'Dedicate 90 minutes to self-improvement',
+        type: 'self_improvement' as ActivityType,
+        target_minutes: 90,
+        bonus_xp: 100,
+      },
+    ];
+
+    try {
+      for (const challenge of challenges) {
+        await supabase
+          .from('weekly_challenges')
+          .insert({
+            user_id: profile.id,
+            title: challenge.title,
+            description: challenge.description,
+            type: challenge.type,
+            target_minutes: challenge.target_minutes,
+            bonus_xp: challenge.bonus_xp,
+            week_start: weekStart,
+            week_end: weekEnd,
+          });
+      }
+
+      // Fetch newly created challenges
+      const { data: newChallenges } = await supabase
+        .from('weekly_challenges')
+        .select('*')
+        .eq('user_id', profile.id)
+        .eq('week_start', weekStart);
+      
+      if (newChallenges) {
+        set({ weeklyChallenges: newChallenges as unknown as WeeklyChallenge[] });
+      }
+    } catch (error) {
+      console.error('Error generating weekly challenges:', error);
+    }
+  },
+
+  updateWeeklyChallengeProgress: async (challengeId: string, minutes: number) => {
+    const profile = get().profile;
+    const challenges = get().weeklyChallenges;
+    if (!profile) return;
+
+    const challenge = challenges.find(c => c.id === challengeId);
+    if (!challenge) return;
+
+    const newProgress = challenge.progress_minutes + minutes;
+    const isCompleted = newProgress >= challenge.target_minutes;
+
+    try {
+      await supabase
+        .from('weekly_challenges')
+        .update({ 
+          progress_minutes: newProgress,
+          completed: isCompleted
+        })
+        .eq('id', challengeId);
+
+      // If completed, award bonus XP
+      if (isCompleted && !challenge.completed) {
+        const newTotalXp = profile.total_xp + challenge.bonus_xp;
+        let newLevel = profile.level;
+        
+        while (newTotalXp >= getXpRequiredForLevel(newLevel + 1)) {
+          newLevel++;
+        }
+
+        await supabase
+          .from('profiles')
+          .update({ total_xp: newTotalXp, level: newLevel })
+          .eq('id', profile.id);
+      }
+
+      await get().fetchUserData(profile.id);
+    } catch (error) {
+      console.error('Error updating weekly challenge:', error);
     }
   },
 }));

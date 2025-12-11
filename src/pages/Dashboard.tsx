@@ -11,11 +11,11 @@ import { QuickActions } from '@/components/game/QuickActions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { ArrowRight, TrendingUp } from 'lucide-react';
+import { ArrowRight, TrendingUp, Sparkles, Trophy } from 'lucide-react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { profile, missions, activities, isLoading, fetchUserData, generateDailyMissions } = useGameStore();
+  const { profile, missions, weeklyChallenges, activities, isLoading, fetchUserData, generateDailyMissions, generateWeeklyChallenges } = useGameStore();
 
   useEffect(() => {
     const initData = async () => {
@@ -26,9 +26,10 @@ export default function Dashboard() {
       }
       await fetchUserData(session.user.id);
       await generateDailyMissions();
+      await generateWeeklyChallenges();
     };
     initData();
-  }, [navigate, fetchUserData, generateDailyMissions]);
+  }, [navigate, fetchUserData, generateDailyMissions, generateWeeklyChallenges]);
 
   // Prepare chart data from activities
   const chartData = (() => {
@@ -200,6 +201,57 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </div>
         </motion.div>
+
+        {/* Weekly Challenges Preview */}
+        {weeklyChallenges.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="game-card-glow p-6"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-yellow-500" />
+                <h3 className="font-display text-lg font-semibold">Weekly Challenges</h3>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/challenges')}>
+                View All <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+            
+            <div className="grid gap-3">
+              {weeklyChallenges.slice(0, 2).map((challenge) => (
+                <div 
+                  key={challenge.id}
+                  className={`p-4 rounded-lg border transition-colors cursor-pointer hover:border-primary/50 ${
+                    challenge.completed 
+                      ? 'bg-yellow-500/5 border-yellow-500/30' 
+                      : 'bg-muted/30 border-border'
+                  }`}
+                  onClick={() => navigate('/challenges')}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium">{challenge.title}</span>
+                    {challenge.completed && (
+                      <Trophy className="w-5 h-5 text-yellow-500" />
+                    )}
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden mb-2">
+                    <div 
+                      className="h-full bg-primary rounded-full transition-all"
+                      style={{ width: `${Math.min(100, (challenge.progress_minutes / challenge.target_minutes) * 100)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>{challenge.progress_minutes}/{challenge.target_minutes} min</span>
+                    <span className="text-yellow-500">+{challenge.bonus_xp} XP</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
       </div>
     </AppLayout>
   );

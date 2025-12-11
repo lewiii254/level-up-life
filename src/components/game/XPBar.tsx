@@ -1,9 +1,35 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
+import { useSound } from '@/hooks/useSound';
+import { useHaptic } from '@/hooks/useHaptic';
 import { Zap } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 export function XPBar() {
-  const { profile, getXpProgress, getXpForNextLevel } = useGameStore();
+  const { profile, getXpProgress, getXpForNextLevel, soundEnabled, hapticEnabled } = useGameStore();
+  const { playSound } = useSound({ enabled: soundEnabled });
+  const { triggerHaptic } = useHaptic({ enabled: hapticEnabled });
+  const prevXpRef = useRef<number>(0);
+  const prevLevelRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!profile) return;
+    
+    // Check for XP gain
+    if (prevXpRef.current > 0 && profile.total_xp > prevXpRef.current) {
+      playSound('xp');
+      triggerHaptic('light');
+    }
+    
+    // Check for level up
+    if (prevLevelRef.current > 0 && profile.level > prevLevelRef.current) {
+      playSound('levelUp');
+      triggerHaptic('success');
+    }
+    
+    prevXpRef.current = profile.total_xp;
+    prevLevelRef.current = profile.level;
+  }, [profile?.total_xp, profile?.level]);
 
   if (!profile) return null;
 

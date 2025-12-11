@@ -6,6 +6,8 @@ import { useGameStore, ActivityType } from '@/store/gameStore';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
+import { useSound } from '@/hooks/useSound';
+import { useHaptic } from '@/hooks/useHaptic';
 import { Play, Pause, RotateCcw, Check, Code, BookOpen, Heart, Zap } from 'lucide-react';
 
 const TIMER_PRESETS = [
@@ -23,7 +25,9 @@ const activityConfig = {
 
 export default function Timer() {
   const navigate = useNavigate();
-  const { profile, logActivity, fetchUserData } = useGameStore();
+  const { profile, logActivity, fetchUserData, soundEnabled, hapticEnabled } = useGameStore();
+  const { playSound } = useSound({ enabled: soundEnabled });
+  const { triggerHaptic } = useHaptic({ enabled: hapticEnabled });
   
   const [selectedActivity, setSelectedActivity] = useState<ActivityType>('coding');
   const [totalSeconds, setTotalSeconds] = useState(25 * 60);
@@ -64,6 +68,10 @@ export default function Timer() {
   const handleComplete = async () => {
     const minutes = Math.ceil(totalSeconds / 60);
     const xp = selectedActivity === 'self_improvement' ? Math.floor(minutes * 0.5) : minutes;
+    
+    // Play completion sound and haptic feedback
+    playSound('missionComplete');
+    triggerHaptic('success');
     
     await logActivity(selectedActivity, minutes);
     
