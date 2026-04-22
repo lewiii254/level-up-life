@@ -36,10 +36,28 @@ export default function WeeklyChallenges() {
   }, [navigate, fetchUserData, generateWeeklyChallenges]);
 
   const completedChallenges = weeklyChallenges.filter(c => c.completed).length;
+  const claimedChallenges = weeklyChallenges.filter(c => c.claimed).length;
   const totalChallenges = weeklyChallenges.length;
   const allComplete = completedChallenges === totalChallenges && totalChallenges > 0;
-  const totalBonusXp = weeklyChallenges.reduce((sum, c) => sum + (c.completed ? c.bonus_xp : 0), 0);
-  const potentialBonusXp = weeklyChallenges.reduce((sum, c) => sum + c.bonus_xp, 0);
+  const allClaimed = claimedChallenges === totalChallenges && totalChallenges > 0;
+  const multiplier = getWeeklyBonusMultiplier();
+  const totalBonusXp = weeklyChallenges.reduce((sum, c) => sum + (c.claimed ? Math.floor(c.bonus_xp * multiplier) : 0), 0);
+  const potentialBonusXp = weeklyChallenges.reduce((sum, c) => sum + Math.floor(c.bonus_xp * multiplier), 0);
+  const weeklyStreak = streaks?.weekly_streak ?? 0;
+
+  const handleClaim = async (challengeId: string) => {
+    const result = await claimWeeklyChallenge(challengeId);
+    if (result) {
+      playSound('levelUp');
+      triggerHaptic('success');
+      toast({
+        title: `🎉 Bonus Claimed! +${result.awarded} XP`,
+        description: result.multiplier > 1
+          ? `${result.multiplier.toFixed(2)}x stacking multiplier active`
+          : 'Complete all weekly challenges to grow your stack!',
+      });
+    }
+  };
 
   // Calculate week dates
   const getWeekDates = () => {
