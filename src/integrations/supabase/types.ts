@@ -44,6 +44,13 @@ export type Database = {
             foreignKeyName: "activities_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "leaderboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -75,6 +82,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ai_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ai_logs_user_id_fkey"
             columns: ["user_id"]
@@ -146,6 +160,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "missions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "missions_user_id_fkey"
             columns: ["user_id"]
@@ -227,6 +248,13 @@ export type Database = {
             foreignKeyName: "streaks_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "leaderboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "streaks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -263,6 +291,73 @@ export type Database = {
             foreignKeyName: "user_badges_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "leaderboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_badges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      weekly_challenges: {
+        Row: {
+          bonus_xp: number
+          completed: boolean
+          created_at: string
+          description: string | null
+          id: string
+          progress_minutes: number
+          target_minutes: number
+          title: string
+          type: Database["public"]["Enums"]["activity_type"]
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          bonus_xp?: number
+          completed?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          progress_minutes?: number
+          target_minutes: number
+          title: string
+          type: Database["public"]["Enums"]["activity_type"]
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          bonus_xp?: number
+          completed?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          progress_minutes?: number
+          target_minutes?: number
+          title?: string
+          type?: Database["public"]["Enums"]["activity_type"]
+          user_id?: string
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_challenges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weekly_challenges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -270,7 +365,20 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      leaderboard: {
+        Row: {
+          avatar_url: string | null
+          best_streak: number | null
+          coding_streak: number | null
+          id: string | null
+          level: number | null
+          name: string | null
+          self_streak: number | null
+          study_streak: number | null
+          total_xp: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
