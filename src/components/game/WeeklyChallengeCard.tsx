@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
-import { Check, Code, BookOpen, Heart, Zap, Trophy } from 'lucide-react';
+import { Check, Code, BookOpen, Heart, Zap, Trophy, Sparkles } from 'lucide-react';
 import { ActivityType } from '@/store/gameStore';
-import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 
 interface WeeklyChallengeCardProps {
   title: string;
@@ -11,6 +11,9 @@ interface WeeklyChallengeCardProps {
   progressMinutes: number;
   bonusXp: number;
   completed: boolean;
+  claimed?: boolean;
+  multiplier?: number;
+  onClaim?: () => void;
   onClick?: () => void;
 }
 
@@ -46,17 +49,26 @@ export function WeeklyChallengeCard({
   progressMinutes,
   bonusXp,
   completed,
+  claimed = false,
+  multiplier = 1,
+  onClaim,
   onClick,
 }: WeeklyChallengeCardProps) {
   const config = challengeConfig[type];
   const progress = Math.min(100, (progressMinutes / targetMinutes) * 100);
+  const projectedXp = Math.floor(bonusXp * multiplier);
+
+  const handleCardClick = () => {
+    if (!completed && onClick) onClick();
+  };
 
   return (
-    <motion.button
-      onClick={onClick}
-      whileHover={{ scale: 1.02, y: -4 }}
-      whileTap={{ scale: 0.98 }}
-      className={`w-full text-left game-card p-6 ${completed ? 'border-2 border-yellow-500/50 bg-yellow-500/5' : ''}`}
+    <motion.div
+      whileHover={!completed ? { scale: 1.01, y: -2 } : undefined}
+      onClick={handleCardClick}
+      className={`w-full text-left game-card p-6 ${!completed ? 'cursor-pointer' : ''} ${
+        claimed ? 'border-2 border-yellow-500/50 bg-yellow-500/5' : completed ? 'border-2 border-green-500/50' : ''
+      }`}
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-start gap-4 flex-1">
@@ -66,21 +78,24 @@ export function WeeklyChallengeCard({
           <div className="flex-1">
             <h3 className="font-display font-semibold text-lg mb-1">{title}</h3>
             <p className="text-sm text-muted-foreground mb-2">{description}</p>
-            <div className="flex items-center gap-3 text-sm">
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <span>
-                  {progressMinutes}/{targetMinutes} minutes
-                </span>
-              </div>
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <span className="text-muted-foreground">
+                {progressMinutes}/{targetMinutes} minutes
+              </span>
               <div className="flex items-center gap-1 text-yellow-500">
                 <Trophy className="w-4 h-4" />
-                <span className="font-semibold">+{bonusXp} Bonus XP</span>
+                <span className="font-semibold">+{projectedXp} XP</span>
+                {multiplier > 1 && (
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 ml-1">
+                    {multiplier.toFixed(2)}x
+                  </span>
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        {completed && (
+        {claimed && (
           <motion.div
             initial={{ scale: 0, rotate: -180 }}
             animate={{ scale: 1, rotate: 0 }}
@@ -92,7 +107,7 @@ export function WeeklyChallengeCard({
         )}
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div className="h-3 rounded-full bg-muted overflow-hidden">
           <motion.div
             className={`h-full rounded-full ${config.progressColor}`}
@@ -101,16 +116,31 @@ export function WeeklyChallengeCard({
             transition={{ duration: 0.8, ease: 'easeOut' }}
           />
         </div>
-        <div className="flex justify-between text-xs text-muted-foreground">
+        <div className="flex justify-between items-center text-xs text-muted-foreground">
           <span>{Math.round(progress)}% complete</span>
-          {completed && (
+          {claimed && (
             <span className="text-yellow-500 font-semibold flex items-center gap-1">
               <Zap className="w-3 h-3 fill-current" />
-              Challenge Complete!
+              Bonus Claimed!
             </span>
           )}
         </div>
+
+        {completed && !claimed && onClaim && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <Button
+              onClick={(e) => { e.stopPropagation(); onClaim(); }}
+              className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 text-background hover:opacity-90 font-semibold"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Claim +{projectedXp} XP
+            </Button>
+          </motion.div>
+        )}
       </div>
-    </motion.button>
+    </motion.div>
   );
 }

@@ -552,20 +552,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         })
         .eq('id', challengeId);
 
-      // If completed, award bonus XP
-      if (isCompleted && !challenge.completed) {
-        const newTotalXp = profile.total_xp + challenge.bonus_xp;
-        let newLevel = profile.level;
-        
-        while (newTotalXp >= getXpRequiredForLevel(newLevel + 1)) {
-          newLevel++;
-        }
-
-        await supabase
-          .from('profiles')
-          .update({ total_xp: newTotalXp, level: newLevel })
-          .eq('id', profile.id);
-      }
+      // Bonus XP is no longer auto-awarded — user must claim via claimWeeklyChallenge.
 
       await get().fetchUserData(profile.id);
     } catch (error) {
