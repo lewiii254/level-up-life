@@ -50,7 +50,7 @@ export default function Timer() {
   }, [navigate, profile, fetchUserData]);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     
     if (isRunning && remainingSeconds > 0) {
       interval = setInterval(() => {

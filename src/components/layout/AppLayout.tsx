@@ -9,6 +9,7 @@ import {
   BarChart3, 
   Trophy,
   Sparkles,
+  Crown,
   LogOut,
   Menu,
   X
@@ -30,6 +31,7 @@ const navItems = [
   { path: '/mentor', label: 'AI Mentor', icon: Brain },
   { path: '/stats', label: 'Statistics', icon: BarChart3 },
   { path: '/badges', label: 'Badges', icon: Trophy },
+  { path: '/leaderboard', label: 'Leaderboard', icon: Crown },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {
