@@ -31,8 +31,8 @@ export default function SkillTree() {
     });
   }, [navigate, fetchUserData]);
 
-  const { playSuccess, playLevelUp } = useSound();
-  const { triggerSuccess } = useHaptic();
+  const { playSound } = useSound();
+  const { triggerHaptic } = useHaptic();
 
   const canUnlock = (node: SkillNode) => {
     if (unlocked.has(node.id)) return false;
@@ -51,8 +51,8 @@ export default function SkillTree() {
     await supabase.from('profiles').update({ skill_points: skillPoints - node.cost }).eq('id', profile.id);
     setUnlocked(prev => new Set(prev).add(node.id));
     await fetchUserData(profile.id);
-    playLevelUp();
-    triggerSuccess();
+    playSound('levelUp');
+    triggerHaptic('success');
     toast({ title: `${node.icon} ${node.name} unlocked!`, description: node.description });
   };
 

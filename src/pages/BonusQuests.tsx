@@ -24,8 +24,8 @@ export default function BonusQuests() {
   const navigate = useNavigate();
   const [userId, setUserId] = useState<string>();
   const { quests, loading, claimQuest } = useBonusQuests(userId);
-  const { playSuccess, playLevelUp } = useSound();
-  const { triggerSuccess, triggerImpact } = useHaptic();
+  const { playSound } = useSound();
+  const { triggerHaptic } = useHaptic();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -40,8 +40,8 @@ export default function BonusQuests() {
   const handleClaim = async (id: string, rarity: string) => {
     const xp = await claimQuest(id);
     if (xp) {
-      if (rarity === 'epic') { playLevelUp(); triggerSuccess(); }
-      else { playSuccess(); triggerImpact(); }
+      if (rarity === 'epic') { playSound('levelUp'); triggerHaptic('success'); }
+      else { playSound('missionComplete'); triggerHaptic('medium'); }
       toast({
         title: `🎁 +${xp} Bonus XP claimed!`,
         description: rarity === 'epic' ? 'EPIC reward unlocked!' : 'Nice work, keep grinding!',
