@@ -214,10 +214,12 @@ export type Database = {
           last_coding_date: string | null
           last_self_date: string | null
           last_study_date: string | null
+          last_weekly_complete: string | null
           self_streak: number | null
           study_streak: number | null
           updated_at: string | null
           user_id: string
+          weekly_streak: number
         }
         Insert: {
           coding_streak?: number | null
@@ -226,10 +228,12 @@ export type Database = {
           last_coding_date?: string | null
           last_self_date?: string | null
           last_study_date?: string | null
+          last_weekly_complete?: string | null
           self_streak?: number | null
           study_streak?: number | null
           updated_at?: string | null
           user_id: string
+          weekly_streak?: number
         }
         Update: {
           coding_streak?: number | null
@@ -238,10 +242,12 @@ export type Database = {
           last_coding_date?: string | null
           last_self_date?: string | null
           last_study_date?: string | null
+          last_weekly_complete?: string | null
           self_streak?: number | null
           study_streak?: number | null
           updated_at?: string | null
           user_id?: string
+          weekly_streak?: number
         }
         Relationships: [
           {
@@ -306,6 +312,8 @@ export type Database = {
       weekly_challenges: {
         Row: {
           bonus_xp: number
+          claimed: boolean
+          claimed_at: string | null
           completed: boolean
           created_at: string
           description: string | null
@@ -320,6 +328,8 @@ export type Database = {
         }
         Insert: {
           bonus_xp?: number
+          claimed?: boolean
+          claimed_at?: string | null
           completed?: boolean
           created_at?: string
           description?: string | null
@@ -334,6 +344,8 @@ export type Database = {
         }
         Update: {
           bonus_xp?: number
+          claimed?: boolean
+          claimed_at?: string | null
           completed?: boolean
           created_at?: string
           description?: string | null
