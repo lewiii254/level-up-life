@@ -4,6 +4,7 @@ import { useSound } from '@/hooks/useSound';
 import { useHaptic } from '@/hooks/useHaptic';
 import { Zap } from 'lucide-react';
 import { useEffect, useRef } from 'react';
+import { toast } from '@/hooks/use-toast';
 
 export function XPBar() {
   const { profile, getXpProgress, getXpForNextLevel, soundEnabled, hapticEnabled } = useGameStore();
@@ -14,19 +15,35 @@ export function XPBar() {
 
   useEffect(() => {
     if (!profile) return;
-    
-    // Check for XP gain
-    if (prevXpRef.current > 0 && profile.total_xp > prevXpRef.current) {
+
+    // First load — initialize without firing
+    if (prevXpRef.current === 0 && prevLevelRef.current === 0) {
+      prevXpRef.current = profile.total_xp;
+      prevLevelRef.current = profile.level;
+      return;
+    }
+
+    // XP gain
+    if (profile.total_xp > prevXpRef.current) {
+      const gained = profile.total_xp - prevXpRef.current;
       playSound('xp');
       triggerHaptic('light');
+      toast({
+        title: `⚡ +${gained} XP earned!`,
+        description: `Total: ${profile.total_xp.toLocaleString()} XP`,
+      });
     }
-    
-    // Check for level up
-    if (prevLevelRef.current > 0 && profile.level > prevLevelRef.current) {
+
+    // Level up
+    if (profile.level > prevLevelRef.current) {
       playSound('levelUp');
       triggerHaptic('success');
+      toast({
+        title: `🎉 LEVEL UP! You're now Level ${profile.level}`,
+        description: 'New milestones unlocked — keep grinding!',
+      });
     }
-    
+
     prevXpRef.current = profile.total_xp;
     prevLevelRef.current = profile.level;
   }, [profile?.total_xp, profile?.level]);

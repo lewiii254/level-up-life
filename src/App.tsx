@@ -14,6 +14,7 @@ import Mentor from "./pages/Mentor";
 import Stats from "./pages/Stats";
 import Badges from "./pages/Badges";
 import Leaderboard from "./pages/Leaderboard";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
           <Route path="/stats" element={<Stats />} />
           <Route path="/badges" element={<Badges />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

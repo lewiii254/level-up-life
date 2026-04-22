@@ -1,7 +1,10 @@
 import { motion } from 'framer-motion';
 import { Check, Code, BookOpen, Heart, Zap } from 'lucide-react';
-import { ActivityType } from '@/store/gameStore';
-import { Progress } from '@/components/ui/progress';
+import { ActivityType, useGameStore } from '@/store/gameStore';
+import { useEffect, useRef } from 'react';
+import { useSound } from '@/hooks/useSound';
+import { useHaptic } from '@/hooks/useHaptic';
+import { toast } from '@/hooks/use-toast';
 
 interface MissionCardProps {
   type: ActivityType;
@@ -39,9 +42,26 @@ const missionConfig = {
 };
 
 export function MissionCard({ type, targetMinutes, progressMinutes, completed, onClick }: MissionCardProps) {
+  const { soundEnabled, hapticEnabled } = useGameStore();
+  const { playSound } = useSound({ enabled: soundEnabled });
+  const { triggerHaptic } = useHaptic({ enabled: hapticEnabled });
+  const prevCompleted = useRef<boolean>(completed);
+
   const config = missionConfig[type];
   const progress = Math.min(100, (progressMinutes / targetMinutes) * 100);
   const xpReward = type === 'self_improvement' ? Math.floor(targetMinutes * 0.5) : targetMinutes;
+
+  useEffect(() => {
+    if (completed && !prevCompleted.current) {
+      playSound('missionComplete');
+      triggerHaptic('success');
+      toast({
+        title: `✅ Mission Complete: ${config.label}!`,
+        description: `You earned bonus motivation. Keep the streak alive!`,
+      });
+    }
+    prevCompleted.current = completed;
+  }, [completed]);
 
   return (
     <motion.button
