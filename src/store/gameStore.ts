@@ -572,4 +572,77 @@ export const useGameStore = create<GameState>((set, get) => ({
       console.error('Error updating weekly challenge:', error);
     }
   },
+
+  getWeeklyBonusMultiplier: () => {
+    const ws = get().streaks?.weekly_streak ?? 0;
+    // Stacking: +25% per consecutive completed week, capped at 3x
+    return Math.min(3, 1 + ws * 0.25);
+  },
+
+  claimWeeklyChallenge: async (challengeId: string) => {
+    const profile = get().profile;
+    const streaks = get().streaks;
+    const challenges = get().weeklyChallenges;
+    if (!profile) return null;
+
+    const challenge = challenges.find(c => c.id === challengeId);
+    if (!challenge || !challenge.completed || challenge.claimed) return null;
+
+    // Determine if this claim completes ALL weekly challenges
+    const otherChallenges = challenges.filter(c => c.id !== challengeId);
+    const allOthersClaimed = otherChallenges.every(c => c.claimed);
+    const willCompleteWeek = allOthersClaimed && otherChallenges.every(c => c.completed);
+
+    // Calculate weekly streak bump if this is the final claim
+    let newWeeklyStreak = streaks?.weekly_streak ?? 0;
+    if (willCompleteWeek) {
+      // Check if last_weekly_complete was last week (consecutive)
+      const lastWeekly = streaks?.last_weekly_complete ?? null;
+      if (lastWeekly) {
+        const lastDate = new Date(lastWeekly);
+        const diffDays = Math.floor((Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+        newWeeklyStreak = diffDays <= 14 ? newWeeklyStreak + 1 : 1;
+      } else {
+        newWeeklyStreak = 1;
+      }
+    }
+
+    // Multiplier uses the streak BEFORE this completion bumps it
+    const multiplier = get().getWeeklyBonusMultiplier();
+    const awarded = Math.floor(challenge.bonus_xp * multiplier);
+
+    try {
+      await supabase
+        .from('weekly_challenges')
+        .update({ claimed: true, claimed_at: new Date().toISOString() })
+        .eq('id', challengeId);
+
+      const newTotalXp = profile.total_xp + awarded;
+      let newLevel = profile.level;
+      while (newTotalXp >= getXpRequiredForLevel(newLevel + 1)) {
+        newLevel++;
+      }
+
+      await supabase
+        .from('profiles')
+        .update({ total_xp: newTotalXp, level: newLevel })
+        .eq('id', profile.id);
+
+      if (willCompleteWeek && streaks) {
+        await supabase
+          .from('streaks')
+          .update({
+            weekly_streak: newWeeklyStreak,
+            last_weekly_complete: new Date().toISOString().split('T')[0],
+          })
+          .eq('user_id', profile.id);
+      }
+
+      await get().fetchUserData(profile.id);
+      return { awarded, multiplier, weeklyStreak: newWeeklyStreak };
+    } catch (error) {
+      console.error('Error claiming weekly challenge:', error);
+      return null;
+    }
+  },
 }));
