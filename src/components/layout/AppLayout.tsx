@@ -13,7 +13,10 @@ import {
   Settings,
   LogOut,
   Menu,
-  X
+  X,
+  Gift,
+  User,
+  GitBranch
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useGameStore } from '@/store/gameStore';
@@ -27,8 +30,11 @@ interface AppLayoutProps {
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/missions', label: 'Missions', icon: Target },
+  { path: '/bonus-quests', label: 'Bonus Quests', icon: Gift },
   { path: '/challenges', label: 'Weekly Challenges', icon: Sparkles },
   { path: '/timer', label: 'Focus Timer', icon: Timer },
+  { path: '/skill-tree', label: 'Skill Tree', icon: GitBranch },
+  { path: '/avatar', label: 'Avatar', icon: User },
   { path: '/mentor', label: 'AI Mentor', icon: Brain },
   { path: '/stats', label: 'Statistics', icon: BarChart3 },
   { path: '/badges', label: 'Badges', icon: Trophy },
