@@ -7,11 +7,20 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { WeeklyChallengeCard } from '@/components/game/WeeklyChallengeCard';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Trophy, Calendar, Zap, Timer, Sparkles } from 'lucide-react';
+import { Trophy, Calendar, Zap, Timer, Sparkles, Flame } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { useSound } from '@/hooks/useSound';
+import { useHaptic } from '@/hooks/useHaptic';
 
 export default function WeeklyChallenges() {
   const navigate = useNavigate();
-  const { profile, weeklyChallenges, isLoading, fetchUserData, generateWeeklyChallenges } = useGameStore();
+  const {
+    profile, weeklyChallenges, streaks, isLoading,
+    fetchUserData, generateWeeklyChallenges, claimWeeklyChallenge, getWeeklyBonusMultiplier,
+    soundEnabled, hapticEnabled,
+  } = useGameStore();
+  const { playSound } = useSound({ enabled: soundEnabled });
+  const { triggerHaptic } = useHaptic({ enabled: hapticEnabled });
 
   useEffect(() => {
     const initData = async () => {
