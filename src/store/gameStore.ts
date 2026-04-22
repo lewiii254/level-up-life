@@ -25,6 +25,10 @@ interface Profile {
   level: number;
   total_xp: number;
   avatar_url: string | null;
+  avatar_emoji?: string | null;
+  avatar_color?: string | null;
+  avatar_accessory?: string | null;
+  skill_points?: number;
 }
 
 interface Streak {
@@ -309,9 +313,14 @@ export const useGameStore = create<GameState>((set, get) => ({
         newLevel++;
       }
 
+      // Award 1 skill point per level gained
+      const levelsGained = newLevel - profile.level;
+      const currentSkillPoints = profile.skill_points ?? 0;
+      const newSkillPoints = currentSkillPoints + levelsGained;
+
       await supabase
         .from('profiles')
-        .update({ total_xp: newTotalXp, level: newLevel })
+        .update({ total_xp: newTotalXp, level: newLevel, skill_points: newSkillPoints })
         .eq('id', profile.id);
 
       // Update streak

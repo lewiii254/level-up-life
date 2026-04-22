@@ -15,6 +15,9 @@ import Stats from "./pages/Stats";
 import Badges from "./pages/Badges";
 import Leaderboard from "./pages/Leaderboard";
 import Settings from "./pages/Settings";
+import BonusQuests from "./pages/BonusQuests";
+import Avatar from "./pages/Avatar";
+import SkillTree from "./pages/SkillTree";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +41,9 @@ const App = () => (
           <Route path="/badges" element={<Badges />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/bonus-quests" element={<BonusQuests />} />
+          <Route path="/avatar" element={<Avatar />} />
+          <Route path="/skill-tree" element={<SkillTree />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

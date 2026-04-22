@@ -128,6 +128,57 @@ export type Database = {
         }
         Relationships: []
       }
+      bonus_quests: {
+        Row: {
+          bonus_xp: number
+          claimed: boolean
+          claimed_at: string | null
+          completed: boolean
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          progress_minutes: number
+          rarity: string
+          target_minutes: number
+          title: string
+          type: Database["public"]["Enums"]["activity_type"]
+          user_id: string
+        }
+        Insert: {
+          bonus_xp?: number
+          claimed?: boolean
+          claimed_at?: string | null
+          completed?: boolean
+          created_at?: string
+          date?: string
+          description?: string | null
+          id?: string
+          progress_minutes?: number
+          rarity?: string
+          target_minutes: number
+          title: string
+          type: Database["public"]["Enums"]["activity_type"]
+          user_id: string
+        }
+        Update: {
+          bonus_xp?: number
+          claimed?: boolean
+          claimed_at?: string | null
+          completed?: boolean
+          created_at?: string
+          date?: string
+          description?: string | null
+          id?: string
+          progress_minutes?: number
+          rarity?: string
+          target_minutes?: number
+          title?: string
+          type?: Database["public"]["Enums"]["activity_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       missions: {
         Row: {
           completed: boolean | null
@@ -178,31 +229,64 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_accessory: string | null
+          avatar_color: string | null
+          avatar_emoji: string | null
           avatar_url: string | null
           created_at: string | null
           email: string | null
           id: string
           level: number | null
           name: string | null
+          skill_points: number
           total_xp: number | null
         }
         Insert: {
+          avatar_accessory?: string | null
+          avatar_color?: string | null
+          avatar_emoji?: string | null
           avatar_url?: string | null
           created_at?: string | null
           email?: string | null
           id: string
           level?: number | null
           name?: string | null
+          skill_points?: number
           total_xp?: number | null
         }
         Update: {
+          avatar_accessory?: string | null
+          avatar_color?: string | null
+          avatar_emoji?: string | null
           avatar_url?: string | null
           created_at?: string | null
           email?: string | null
           id?: string
           level?: number | null
           name?: string | null
+          skill_points?: number
           total_xp?: number | null
+        }
+        Relationships: []
+      }
+      skill_unlocks: {
+        Row: {
+          id: string
+          skill_id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          skill_id: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          skill_id?: string
+          unlocked_at?: string
+          user_id?: string
         }
         Relationships: []
       }
