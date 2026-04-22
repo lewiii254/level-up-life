@@ -207,6 +207,9 @@ export default function WeeklyChallenges() {
                   progressMinutes={challenge.progress_minutes}
                   bonusXp={challenge.bonus_xp}
                   completed={challenge.completed}
+                  claimed={challenge.claimed}
+                  multiplier={multiplier}
+                  onClaim={() => handleClaim(challenge.id)}
                   onClick={() => navigate('/timer')}
                 />
               </motion.div>
