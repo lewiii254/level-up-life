@@ -12,6 +12,8 @@ export interface WeeklyChallenge {
   progress_minutes: number;
   bonus_xp: number;
   completed: boolean;
+  claimed: boolean;
+  claimed_at: string | null;
   week_start: string;
   week_end: string;
 }
@@ -29,9 +31,11 @@ interface Streak {
   coding_streak: number;
   study_streak: number;
   self_streak: number;
+  weekly_streak: number;
   last_coding_date: string | null;
   last_study_date: string | null;
   last_self_date: string | null;
+  last_weekly_complete: string | null;
 }
 
 interface Mission {
@@ -101,6 +105,8 @@ interface GameState {
   generateDailyMissions: () => Promise<void>;
   generateWeeklyChallenges: () => Promise<void>;
   updateWeeklyChallengeProgress: (challengeId: string, minutes: number) => Promise<void>;
+  claimWeeklyChallenge: (challengeId: string) => Promise<{ awarded: number; multiplier: number; weeklyStreak: number } | null>;
+  getWeeklyBonusMultiplier: () => number;
 }
 
 // XP required for each level (exponential growth)
@@ -130,8 +136,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   userBadges: [],
   activities: [],
   isLoading: false,
-  soundEnabled: true,
-  hapticEnabled: true,
+  soundEnabled: typeof window !== 'undefined' ? localStorage.getItem('soundEnabled') !== 'false' : true,
+  hapticEnabled: typeof window !== 'undefined' ? localStorage.getItem('hapticEnabled') !== 'false' : true,
 
   setProfile: (profile) => set({ profile }),
   setStreaks: (streaks) => set({ streaks }),
@@ -141,8 +147,14 @@ export const useGameStore = create<GameState>((set, get) => ({
   setUserBadges: (userBadges) => set({ userBadges }),
   setActivities: (activities) => set({ activities }),
   setLoading: (isLoading) => set({ isLoading }),
-  setSoundEnabled: (soundEnabled) => set({ soundEnabled }),
-  setHapticEnabled: (hapticEnabled) => set({ hapticEnabled }),
+  setSoundEnabled: (soundEnabled) => {
+    if (typeof window !== 'undefined') localStorage.setItem('soundEnabled', String(soundEnabled));
+    set({ soundEnabled });
+  },
+  setHapticEnabled: (hapticEnabled) => {
+    if (typeof window !== 'undefined') localStorage.setItem('hapticEnabled', String(hapticEnabled));
+    set({ hapticEnabled });
+  },
 
   getXpForNextLevel: () => {
     const profile = get().profile;
