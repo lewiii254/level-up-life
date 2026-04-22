@@ -110,45 +110,55 @@ export default function WeeklyChallenges() {
           animate={{ opacity: 1, y: 0 }}
           className="game-card-glow p-6"
         >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="flex items-center gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="flex items-center gap-3">
               <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
                 <Trophy className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Completed</p>
-                <p className="font-display text-2xl font-bold">
+                <p className="text-xs text-muted-foreground">Completed</p>
+                <p className="font-display text-xl font-bold">
                   {completedChallenges}/{totalChallenges}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
                 <Zap className="w-6 h-6 text-yellow-500 fill-current" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Bonus XP Earned</p>
-                <p className="font-display text-2xl font-bold text-yellow-500">
-                  {totalBonusXp}
-                </p>
+                <p className="text-xs text-muted-foreground">Bonus XP</p>
+                <p className="font-display text-xl font-bold text-yellow-500">{totalBonusXp}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/30">
+                <Flame className="w-6 h-6 text-orange-500" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Week Streak</p>
+                <p className="font-display text-xl font-bold text-orange-500">{weeklyStreak}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
               <div className="p-3 rounded-lg bg-accent/10 border border-accent/30">
                 <Sparkles className="w-6 h-6 text-accent" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Potential XP</p>
-                <p className="font-display text-2xl font-bold">
-                  {potentialBonusXp}
-                </p>
+                <p className="text-xs text-muted-foreground">Multiplier</p>
+                <p className="font-display text-xl font-bold text-accent">{multiplier.toFixed(2)}x</p>
               </div>
             </div>
           </div>
 
-          {allComplete && (
+          <div className="mt-4 p-3 rounded-lg bg-muted/30 text-sm text-muted-foreground">
+            💡 <strong>Stacking Bonus:</strong> Complete all weekly challenges in consecutive weeks to grow your multiplier (+25% per streak week, max 3x). Potential bonus this week: <strong className="text-yellow-500">{potentialBonusXp} XP</strong>.
+          </div>
+
+          {allClaimed && (
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -156,7 +166,19 @@ export default function WeeklyChallenges() {
             >
               <Trophy className="w-6 h-6 text-yellow-500" />
               <span className="font-display font-semibold text-yellow-500">
-                All challenges complete! You're a champion! 🎉
+                All bonuses claimed! Streak secured for next week 🔥
+              </span>
+            </motion.div>
+          )}
+          {allComplete && !allClaimed && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mt-6 flex items-center justify-center gap-2 p-4 rounded-lg bg-green-500/10 border border-green-500/30"
+            >
+              <Sparkles className="w-6 h-6 text-green-500" />
+              <span className="font-display font-semibold text-green-500">
+                All challenges complete — claim your bonuses below!
               </span>
             </motion.div>
           )}
