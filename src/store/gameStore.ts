@@ -284,10 +284,9 @@ export const useGameStore = create<GameState>((set, get) => ({
           xp,
         });
 
-      // Check for weekly challenge completion and bonus XP
+      // Update weekly challenge progress (no XP awarded here — must be claimed)
       const weeklyChallenges = get().weeklyChallenges;
       const relevantChallenge = weeklyChallenges.find(c => c.type === type && !c.completed);
-      let bonusXp = 0;
       
       if (relevantChallenge) {
         const newProgress = relevantChallenge.progress_minutes + minutes;
@@ -300,15 +299,10 @@ export const useGameStore = create<GameState>((set, get) => ({
             completed: isCompleted
           })
           .eq('id', relevantChallenge.id);
-
-        // Add bonus XP if challenge just completed
-        if (isCompleted && !relevantChallenge.completed) {
-          bonusXp = relevantChallenge.bonus_xp;
-        }
       }
 
-      // Update profile XP and check for level up (including bonus XP)
-      const newTotalXp = profile.total_xp + xp + bonusXp;
+      // Update profile XP and check for level up
+      const newTotalXp = profile.total_xp + xp;
       let newLevel = profile.level;
       
       while (newTotalXp >= getXpRequiredForLevel(newLevel + 1)) {
