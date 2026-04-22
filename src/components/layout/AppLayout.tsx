@@ -22,6 +22,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
+import { AvatarDisplay } from '@/components/game/AvatarDisplay';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -74,15 +75,24 @@ export function AppLayout({ children }: AppLayoutProps) {
         {/* Profile Summary */}
         {profile && (
           <div className="p-4 border-b border-sidebar-border">
-            <div className="flex items-center gap-3">
-              <div className="level-badge text-sm">
-                {profile.level}
-              </div>
-              <div className="flex-1 min-w-0">
+            <button onClick={() => navigate('/avatar')} className="w-full flex items-center gap-3 hover:opacity-80 transition-opacity">
+              <AvatarDisplay
+                emoji={profile.avatar_emoji}
+                color={profile.avatar_color}
+                accessory={profile.avatar_accessory}
+                size="sm"
+                animated={false}
+              />
+              <div className="flex-1 min-w-0 text-left">
                 <p className="font-medium truncate">{profile.name || 'Hero'}</p>
-                <p className="text-xs text-muted-foreground">{profile.total_xp} XP</p>
+                <p className="text-xs text-muted-foreground">Lv {profile.level} · {profile.total_xp} XP</p>
               </div>
-            </div>
+              {(profile.skill_points ?? 0) > 0 && (
+                <span className="text-xs px-2 py-1 rounded-full bg-amber-400/20 text-amber-300 font-bold">
+                  {profile.skill_points} SP
+                </span>
+              )}
+            </button>
           </div>
         )}
 
