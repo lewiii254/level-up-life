@@ -1,0 +1,8 @@
+
+ALTER TABLE public.weekly_challenges
+  ADD COLUMN IF NOT EXISTS claimed BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS claimed_at TIMESTAMPTZ;
+
+ALTER TABLE public.streaks
+  ADD COLUMN IF NOT EXISTS weekly_streak INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS last_weekly_complete DATE;

@@ -12,6 +12,8 @@ export interface WeeklyChallenge {
   progress_minutes: number;
   bonus_xp: number;
   completed: boolean;
+  claimed: boolean;
+  claimed_at: string | null;
   week_start: string;
   week_end: string;
 }
@@ -29,9 +31,11 @@ interface Streak {
   coding_streak: number;
   study_streak: number;
   self_streak: number;
+  weekly_streak: number;
   last_coding_date: string | null;
   last_study_date: string | null;
   last_self_date: string | null;
+  last_weekly_complete: string | null;
 }
 
 interface Mission {
@@ -101,6 +105,8 @@ interface GameState {
   generateDailyMissions: () => Promise<void>;
   generateWeeklyChallenges: () => Promise<void>;
   updateWeeklyChallengeProgress: (challengeId: string, minutes: number) => Promise<void>;
+  claimWeeklyChallenge: (challengeId: string) => Promise<{ awarded: number; multiplier: number; weeklyStreak: number } | null>;
+  getWeeklyBonusMultiplier: () => number;
 }
 
 // XP required for each level (exponential growth)
@@ -130,8 +136,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   userBadges: [],
   activities: [],
   isLoading: false,
-  soundEnabled: true,
-  hapticEnabled: true,
+  soundEnabled: typeof window !== 'undefined' ? localStorage.getItem('soundEnabled') !== 'false' : true,
+  hapticEnabled: typeof window !== 'undefined' ? localStorage.getItem('hapticEnabled') !== 'false' : true,
 
   setProfile: (profile) => set({ profile }),
   setStreaks: (streaks) => set({ streaks }),
@@ -141,8 +147,14 @@ export const useGameStore = create<GameState>((set, get) => ({
   setUserBadges: (userBadges) => set({ userBadges }),
   setActivities: (activities) => set({ activities }),
   setLoading: (isLoading) => set({ isLoading }),
-  setSoundEnabled: (soundEnabled) => set({ soundEnabled }),
-  setHapticEnabled: (hapticEnabled) => set({ hapticEnabled }),
+  setSoundEnabled: (soundEnabled) => {
+    if (typeof window !== 'undefined') localStorage.setItem('soundEnabled', String(soundEnabled));
+    set({ soundEnabled });
+  },
+  setHapticEnabled: (hapticEnabled) => {
+    if (typeof window !== 'undefined') localStorage.setItem('hapticEnabled', String(hapticEnabled));
+    set({ hapticEnabled });
+  },
 
   getXpForNextLevel: () => {
     const profile = get().profile;
@@ -272,10 +284,9 @@ export const useGameStore = create<GameState>((set, get) => ({
           xp,
         });
 
-      // Check for weekly challenge completion and bonus XP
+      // Update weekly challenge progress (no XP awarded here — must be claimed)
       const weeklyChallenges = get().weeklyChallenges;
       const relevantChallenge = weeklyChallenges.find(c => c.type === type && !c.completed);
-      let bonusXp = 0;
       
       if (relevantChallenge) {
         const newProgress = relevantChallenge.progress_minutes + minutes;
@@ -288,15 +299,10 @@ export const useGameStore = create<GameState>((set, get) => ({
             completed: isCompleted
           })
           .eq('id', relevantChallenge.id);
-
-        // Add bonus XP if challenge just completed
-        if (isCompleted && !relevantChallenge.completed) {
-          bonusXp = relevantChallenge.bonus_xp;
-        }
       }
 
-      // Update profile XP and check for level up (including bonus XP)
-      const newTotalXp = profile.total_xp + xp + bonusXp;
+      // Update profile XP and check for level up
+      const newTotalXp = profile.total_xp + xp;
       let newLevel = profile.level;
       
       while (newTotalXp >= getXpRequiredForLevel(newLevel + 1)) {
@@ -546,24 +552,84 @@ export const useGameStore = create<GameState>((set, get) => ({
         })
         .eq('id', challengeId);
 
-      // If completed, award bonus XP
-      if (isCompleted && !challenge.completed) {
-        const newTotalXp = profile.total_xp + challenge.bonus_xp;
-        let newLevel = profile.level;
-        
-        while (newTotalXp >= getXpRequiredForLevel(newLevel + 1)) {
-          newLevel++;
-        }
-
-        await supabase
-          .from('profiles')
-          .update({ total_xp: newTotalXp, level: newLevel })
-          .eq('id', profile.id);
-      }
+      // Bonus XP is no longer auto-awarded — user must claim via claimWeeklyChallenge.
 
       await get().fetchUserData(profile.id);
     } catch (error) {
       console.error('Error updating weekly challenge:', error);
+    }
+  },
+
+  getWeeklyBonusMultiplier: () => {
+    const ws = get().streaks?.weekly_streak ?? 0;
+    // Stacking: +25% per consecutive completed week, capped at 3x
+    return Math.min(3, 1 + ws * 0.25);
+  },
+
+  claimWeeklyChallenge: async (challengeId: string) => {
+    const profile = get().profile;
+    const streaks = get().streaks;
+    const challenges = get().weeklyChallenges;
+    if (!profile) return null;
+
+    const challenge = challenges.find(c => c.id === challengeId);
+    if (!challenge || !challenge.completed || challenge.claimed) return null;
+
+    // Determine if this claim completes ALL weekly challenges
+    const otherChallenges = challenges.filter(c => c.id !== challengeId);
+    const allOthersClaimed = otherChallenges.every(c => c.claimed);
+    const willCompleteWeek = allOthersClaimed && otherChallenges.every(c => c.completed);
+
+    // Calculate weekly streak bump if this is the final claim
+    let newWeeklyStreak = streaks?.weekly_streak ?? 0;
+    if (willCompleteWeek) {
+      // Check if last_weekly_complete was last week (consecutive)
+      const lastWeekly = streaks?.last_weekly_complete ?? null;
+      if (lastWeekly) {
+        const lastDate = new Date(lastWeekly);
+        const diffDays = Math.floor((Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+        newWeeklyStreak = diffDays <= 14 ? newWeeklyStreak + 1 : 1;
+      } else {
+        newWeeklyStreak = 1;
+      }
+    }
+
+    // Multiplier uses the streak BEFORE this completion bumps it
+    const multiplier = get().getWeeklyBonusMultiplier();
+    const awarded = Math.floor(challenge.bonus_xp * multiplier);
+
+    try {
+      await supabase
+        .from('weekly_challenges')
+        .update({ claimed: true, claimed_at: new Date().toISOString() })
+        .eq('id', challengeId);
+
+      const newTotalXp = profile.total_xp + awarded;
+      let newLevel = profile.level;
+      while (newTotalXp >= getXpRequiredForLevel(newLevel + 1)) {
+        newLevel++;
+      }
+
+      await supabase
+        .from('profiles')
+        .update({ total_xp: newTotalXp, level: newLevel })
+        .eq('id', profile.id);
+
+      if (willCompleteWeek && streaks) {
+        await supabase
+          .from('streaks')
+          .update({
+            weekly_streak: newWeeklyStreak,
+            last_weekly_complete: new Date().toISOString().split('T')[0],
+          })
+          .eq('user_id', profile.id);
+      }
+
+      await get().fetchUserData(profile.id);
+      return { awarded, multiplier, weeklyStreak: newWeeklyStreak };
+    } catch (error) {
+      console.error('Error claiming weekly challenge:', error);
+      return null;
     }
   },
 }));

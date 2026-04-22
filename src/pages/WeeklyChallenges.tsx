@@ -7,11 +7,20 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { WeeklyChallengeCard } from '@/components/game/WeeklyChallengeCard';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Trophy, Calendar, Zap, Timer, Sparkles } from 'lucide-react';
+import { Trophy, Calendar, Zap, Timer, Sparkles, Flame } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { useSound } from '@/hooks/useSound';
+import { useHaptic } from '@/hooks/useHaptic';
 
 export default function WeeklyChallenges() {
   const navigate = useNavigate();
-  const { profile, weeklyChallenges, isLoading, fetchUserData, generateWeeklyChallenges } = useGameStore();
+  const {
+    profile, weeklyChallenges, streaks, isLoading,
+    fetchUserData, generateWeeklyChallenges, claimWeeklyChallenge, getWeeklyBonusMultiplier,
+    soundEnabled, hapticEnabled,
+  } = useGameStore();
+  const { playSound } = useSound({ enabled: soundEnabled });
+  const { triggerHaptic } = useHaptic({ enabled: hapticEnabled });
 
   useEffect(() => {
     const initData = async () => {
@@ -27,10 +36,28 @@ export default function WeeklyChallenges() {
   }, [navigate, fetchUserData, generateWeeklyChallenges]);
 
   const completedChallenges = weeklyChallenges.filter(c => c.completed).length;
+  const claimedChallenges = weeklyChallenges.filter(c => c.claimed).length;
   const totalChallenges = weeklyChallenges.length;
   const allComplete = completedChallenges === totalChallenges && totalChallenges > 0;
-  const totalBonusXp = weeklyChallenges.reduce((sum, c) => sum + (c.completed ? c.bonus_xp : 0), 0);
-  const potentialBonusXp = weeklyChallenges.reduce((sum, c) => sum + c.bonus_xp, 0);
+  const allClaimed = claimedChallenges === totalChallenges && totalChallenges > 0;
+  const multiplier = getWeeklyBonusMultiplier();
+  const totalBonusXp = weeklyChallenges.reduce((sum, c) => sum + (c.claimed ? Math.floor(c.bonus_xp * multiplier) : 0), 0);
+  const potentialBonusXp = weeklyChallenges.reduce((sum, c) => sum + Math.floor(c.bonus_xp * multiplier), 0);
+  const weeklyStreak = streaks?.weekly_streak ?? 0;
+
+  const handleClaim = async (challengeId: string) => {
+    const result = await claimWeeklyChallenge(challengeId);
+    if (result) {
+      playSound('levelUp');
+      triggerHaptic('success');
+      toast({
+        title: `🎉 Bonus Claimed! +${result.awarded} XP`,
+        description: result.multiplier > 1
+          ? `${result.multiplier.toFixed(2)}x stacking multiplier active`
+          : 'Complete all weekly challenges to grow your stack!',
+      });
+    }
+  };
 
   // Calculate week dates
   const getWeekDates = () => {
@@ -83,45 +110,55 @@ export default function WeeklyChallenges() {
           animate={{ opacity: 1, y: 0 }}
           className="game-card-glow p-6"
         >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="flex items-center gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="flex items-center gap-3">
               <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
                 <Trophy className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Completed</p>
-                <p className="font-display text-2xl font-bold">
+                <p className="text-xs text-muted-foreground">Completed</p>
+                <p className="font-display text-xl font-bold">
                   {completedChallenges}/{totalChallenges}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
                 <Zap className="w-6 h-6 text-yellow-500 fill-current" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Bonus XP Earned</p>
-                <p className="font-display text-2xl font-bold text-yellow-500">
-                  {totalBonusXp}
-                </p>
+                <p className="text-xs text-muted-foreground">Bonus XP</p>
+                <p className="font-display text-xl font-bold text-yellow-500">{totalBonusXp}</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/30">
+                <Flame className="w-6 h-6 text-orange-500" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Week Streak</p>
+                <p className="font-display text-xl font-bold text-orange-500">{weeklyStreak}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
               <div className="p-3 rounded-lg bg-accent/10 border border-accent/30">
                 <Sparkles className="w-6 h-6 text-accent" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Potential XP</p>
-                <p className="font-display text-2xl font-bold">
-                  {potentialBonusXp}
-                </p>
+                <p className="text-xs text-muted-foreground">Multiplier</p>
+                <p className="font-display text-xl font-bold text-accent">{multiplier.toFixed(2)}x</p>
               </div>
             </div>
           </div>
 
-          {allComplete && (
+          <div className="mt-4 p-3 rounded-lg bg-muted/30 text-sm text-muted-foreground">
+            💡 <strong>Stacking Bonus:</strong> Complete all weekly challenges in consecutive weeks to grow your multiplier (+25% per streak week, max 3x). Potential bonus this week: <strong className="text-yellow-500">{potentialBonusXp} XP</strong>.
+          </div>
+
+          {allClaimed && (
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -129,7 +166,19 @@ export default function WeeklyChallenges() {
             >
               <Trophy className="w-6 h-6 text-yellow-500" />
               <span className="font-display font-semibold text-yellow-500">
-                All challenges complete! You're a champion! 🎉
+                All bonuses claimed! Streak secured for next week 🔥
+              </span>
+            </motion.div>
+          )}
+          {allComplete && !allClaimed && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mt-6 flex items-center justify-center gap-2 p-4 rounded-lg bg-green-500/10 border border-green-500/30"
+            >
+              <Sparkles className="w-6 h-6 text-green-500" />
+              <span className="font-display font-semibold text-green-500">
+                All challenges complete — claim your bonuses below!
               </span>
             </motion.div>
           )}
@@ -158,6 +207,9 @@ export default function WeeklyChallenges() {
                   progressMinutes={challenge.progress_minutes}
                   bonusXp={challenge.bonus_xp}
                   completed={challenge.completed}
+                  claimed={challenge.claimed}
+                  multiplier={multiplier}
+                  onClaim={() => handleClaim(challenge.id)}
                   onClick={() => navigate('/timer')}
                 />
               </motion.div>

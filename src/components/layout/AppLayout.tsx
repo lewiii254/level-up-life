@@ -10,6 +10,7 @@ import {
   Trophy,
   Sparkles,
   Crown,
+  Settings,
   LogOut,
   Menu,
   X
@@ -32,6 +33,7 @@ const navItems = [
   { path: '/stats', label: 'Statistics', icon: BarChart3 },
   { path: '/badges', label: 'Badges', icon: Trophy },
   { path: '/leaderboard', label: 'Leaderboard', icon: Crown },
+  { path: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {
